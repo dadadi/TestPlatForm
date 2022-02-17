@@ -1,3 +1,5 @@
+import json
+
 from flask import Flask, request
 from flask_restful import Resource, Api
 from flask_sqlalchemy import SQLAlchemy
@@ -12,6 +14,7 @@ ip = "47.98.61.20"
 port = "3306"
 database = "test_platform"
 app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{username}:{password}@{ip}:{port}/{database}?charset=utf8'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 # 数据库关联flask
 db = SQLAlchemy(app)
 
@@ -22,6 +25,15 @@ class TestCase(db.Model):
     nodeid = db.Column(db.String(80), nullable=False)
     remark = db.Column(db.String(120))
 
+    def as_dict(self):
+        """
+        返回一个标准python结构体
+        :return:
+        """
+        return {
+            "id": self.id, "nodeid": self.nodeid, "remark": self.remark
+        }
+
 
 # 类代表是哪个接口资源，每个方法，代表对此资源的操作，比如 get post等
 # 在类服务中集成resource，表示使用flask-restful
@@ -29,6 +41,7 @@ class TestCaseService(Resource):
     """
     测试用例服务
     """
+
     # 方法名对应app.route 中的methods
     def get(self):
         """
@@ -40,12 +53,14 @@ class TestCaseService(Resource):
             # 查询单条数据信息
             case_data = TestCase.query.filter_by(id=case_id).first()
             app.logger.info(f"[TestCaseService][get]根据id={case_id}获取测试用例：{case_data}")
-            data = [{"id": case_data.id, "nodeid": case_data.nodeid, "remark": case_data.remark}]
+            # data = [{"id": case_data.id, "nodeid": case_data.nodeid, "remark": case_data.remark}]
+            data = [case_data.as_dict()]
         else:
             # 查询所有用例信息
             case_data = TestCase.query.all()
             app.logger.info(f"[TestCaseService][get]获取所有测试用例：{case_data}")
-            data = [{"id": i.id, "nodeid": i.nodeid, "remark": i.remark} for i in case_data]
+            # data = [{"id": i.id, "nodeid": i.nodeid, "remark": i.remark} for i in case_data]
+            data = [i.as_dict() for i in case_data]
         return {"error": 0, "msg": {"data": data}}
 
     def post(self):
@@ -54,6 +69,8 @@ class TestCaseService(Resource):
         app.logger.info(f"[TestCaseService][post]新增测试用例{case_data}")
         # 从接口中拿到的字典数据进行解包，使用关键字传惨，传入Testcase
         testcase = TestCase(**case_data)
+        #如果数据字段讯在列表，需要做一次转换
+        testcase.nodeid = json.dumps(request.json.get("nodeid"))
         db.session.add(testcase)
         db.session.commit()
         return {"error": 0, "msg": "post success"}
@@ -76,8 +93,13 @@ class TestCaseService(Resource):
         删除用例
         :return:
         """
-
-        return {"error": 0, "msg": "delete success"}
+        case_id = request.args.get("id")
+        if not case_id:
+            return {"error": 40001, "msg": "delete case_id can't be null"}
+        result = TestCase.query.filter_by(id=case_id).delete()
+        db.session.commit()
+        app.logger.info(f"[TestCaseService]id为{case_id}的数据已被修改")
+        return {"error": 0, "msg": result}
 
 
 if __name__ == '__main__':
