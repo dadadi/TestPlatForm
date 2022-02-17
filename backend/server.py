@@ -14,6 +14,7 @@ ip = "47.98.61.20"
 port = "3306"
 database = "test_platform"
 app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{username}:{password}@{ip}:{port}/{database}?charset=utf8'
+# 解决warning的问题
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 # 数据库关联flask
 db = SQLAlchemy(app)
