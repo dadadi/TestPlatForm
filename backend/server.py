@@ -1,12 +1,15 @@
 import json
 
 from flask import Flask, request
+from flask_cors import CORS
 from flask_restful import Resource, Api
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 # api实例化
 api = Api(app)
+# 解决跨域
+CORS(app, supports_credentials=True)
 
 username = "root"
 password = "123456"
@@ -71,7 +74,9 @@ class TestCaseService(Resource):
         # 从接口中拿到的字典数据进行解包，使用关键字传惨，传入Testcase
         testcase = TestCase(**case_data)
         #如果数据字段讯在列表，需要做一次转换
-        testcase.nodeid = json.dumps(request.json.get("nodeid"))
+        # 每次如果dumps,name字符串会添加""
+        if testcase.nodeid is list:
+            testcase.nodeid = json.dumps(request.json.get("nodeid"))
         db.session.add(testcase)
         db.session.commit()
         return {"error": 0, "msg": "post success"}

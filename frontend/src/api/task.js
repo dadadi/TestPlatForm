@@ -6,14 +6,14 @@ const task = {
             url:'/task',
         })
     },
-    deleteTask(){
-        
+    postTask(){
+
     },
     updateTask(){
 
     },
-    postTask(){
-
-    }
+    deleteTask(){
+        
+    },
 }
 export default task
